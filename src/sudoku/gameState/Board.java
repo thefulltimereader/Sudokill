@@ -22,7 +22,7 @@ public class Board {
       
     }
     possibleMovesAfterOpponentMoveWithConstraints = setPossibleMoves();
-    possibleMovesAfterOpponentMove = null;
+    possibleMovesAfterOpponentMove = new ArrayList<Point>();
     opponentPt = null;
   }
   public List<Square> getSquares(){
@@ -64,7 +64,8 @@ public class Board {
       }
     }
     possibleMovesAfterOpponentMoveWithConstraints = setPossibleMoves();
-    possibleMovesAfterOpponentMove = null;
+    possibleMovesAfterOpponentMove = new ArrayList<Point>();
+    
     opponentPt = null;
   }
   /**
@@ -115,13 +116,13 @@ public class Board {
   /**
    * Only in the diagonal/vertical of the point
    */
-  private List<Point> getEmptyPointsInCrossSectionAt(Point pt){
-    List<Point> poss = getRowAndColPossibilities(pt);
+  private List<Point> getEmptyPointsInCrossSectionAt(Point pt, int sqID, int sqPos){
+    List<Point> poss = getRowAndColPossibilities(pt, sqID, sqPos);
     return poss;
   }
-  private List<Point> getRowAndColPossibilities(Point p) {
-    List<Point> poss = getRowPoints(p.getX()%SIZE);
-    poss.addAll(getColPoints(p.getY()%SIZE));
+  private List<Point> getRowAndColPossibilities(Point p, int sqID, int sqPos) {    
+    List<Point> poss = getRowPoints((sqID/SIZE)*SIZE, sqPos);
+    poss.addAll(getColPoints(sqID%SIZE, sqPos));
     return poss;
   }
   /**
@@ -135,8 +136,11 @@ public class Board {
     Iterator<Point> itr = refinedList.iterator();
     while(itr.hasNext()){
       Point p = itr.next();
-      rowConstraints= getRow(p.getX()%SIZE);
-      colConstraints = getCol(p.getY()%SIZE);
+      Pair<Integer, Integer> pos = getSquareIDandSquarePos(p);
+      int sqID = pos.getFst();
+      int sqPos = pos.getSnd();
+      rowConstraints= getRow(sqID/SIZE, sqPos);
+      colConstraints = getCol(sqID%SIZE, sqPos);
       if(rowConstraints.contains(p.getVal()) || 
           colConstraints.contains(p.getVal()))
         itr.remove();
@@ -145,48 +149,48 @@ public class Board {
   }    
   /**
    * Gets the row with 0<=index<9
-   * @param id
+   * @param sqId
    * @return
    */
-  private List<Integer> getRow(int id){
+  private List<Integer> getRow(int sqId, int sqPos){
     List<Integer> row = new ArrayList<Integer>(SIZE*SIZE);
-    int squareID = id%SIZE;
+    int squareID = sqId*SIZE;
     for(int i=0; i<SIZE; i++){
-      row.addAll(squares.get(squareID+i).getRow(id));
+      row.addAll(squares.get(squareID+i).getRow(sqPos/SIZE));
     }
     return row;
   }
-  private List<Point> getRowPoints(int id){
+  private List<Point> getRowPoints(int sqId, int sqPos){
     List<Point> row = new ArrayList<Point>();
-    int squareID = id%SIZE;
+    int squareID = sqId;
     for(int i=0; i<SIZE; i++){
-      row.addAll(squares.get(squareID+i).getRowPossible(id));
+      row.addAll(squares.get(squareID+i).getRowPossible(sqPos/SIZE));
     }
     return row;
   }
   /**
    * Gets the col with 0<=index<9
-   * @param id
+   * @param sqId
    * @return
    */
-  private List<Integer> getCol(int id){
+  private List<Integer> getCol(int sqId, int sqPos){
     List<Integer> col = new ArrayList<Integer>(SIZE*SIZE);
-    int squareID = id / SIZE;//mod it to 3x3 board
+    int squareID = sqId % SIZE;//mod it to 3x3 board
     for(int i=0; i<SIZE;i++){
-      col.addAll(squares.get(squareID+i*SIZE).getCol(id));
+      col.addAll(squares.get(squareID+i*SIZE).getCol(sqPos%SIZE));
     }
     return col;
   }
   /**
    * Returns the possible points in this col
-   * @param id
+   * @param sqID
    * @return
    */
-  private List<Point> getColPoints(int id){
+  private List<Point> getColPoints(int sqID, int sqPos){
     List<Point> col = new ArrayList<Point>(SIZE*SIZE);
-    int squareID = id / SIZE;//mod it to 3x3 board
+    int squareID = sqID % SIZE;//mod it to 3x3 board
     for(int i=0; i<SIZE;i++){
-      col.addAll(squares.get(squareID+i*SIZE).getColPossible(id));
+      col.addAll(squares.get(squareID+i*SIZE).getColPossible(sqPos%SIZE));
     }
     return col;
   }
@@ -199,8 +203,15 @@ public class Board {
     opponentPt = p;
     Pair<Integer, Integer> sqIDandPos = getSquareIDandSquarePos(p);
     squares.get(sqIDandPos.getFst()).update(sqIDandPos.getSnd(), p.getVal());
-    possibleMovesAfterOpponentMove = getEmptyPointsInCrossSectionAt(opponentPt);
+    possibleMovesAfterOpponentMove = getEmptyPointsInCrossSectionAt(opponentPt, 
+        sqIDandPos.getFst(), sqIDandPos.getSnd());
     possibleMovesAfterOpponentMoveWithConstraints = setPossibleMoves();
+  }
+  public void addPositionByMe(Point p) {
+    possibleMovesAfterOpponentMoveWithConstraints.clear();
+    possibleMovesAfterOpponentMove.clear();    
+    Pair<Integer, Integer> sqIDandPos = getSquareIDandSquarePos(p);
+    squares.get(sqIDandPos.getFst()).update(sqIDandPos.getSnd(), p.getVal());
   }
   /*public void addPosition(int index, int val, int squareId){
     squares.get(squareId).update(index, val);
@@ -226,6 +237,7 @@ public class Board {
   public static int flatten(int x, int y){    
     return x*SIZE + y;
   }
+  /*
   public boolean isConsistent() {
     //check each square
     for(Square s: squares){
@@ -241,7 +253,7 @@ public class Board {
     }
     return true;
   }
-  
+  */
   public boolean complete() {
     for(Square s:squares){
       if(!s.complete()) return false;
@@ -273,7 +285,7 @@ public class Board {
    */
   public boolean win() {
     //game just started
-    if(possibleMovesAfterOpponentMove==null) return false;
+    if(opponentPt==null) return false;
     if(!possibleMovesAfterOpponentMove.isEmpty()) return false;
     if(possibleMovesAfterOpponentMoveWithConstraints.isEmpty()) return true;
     return false;

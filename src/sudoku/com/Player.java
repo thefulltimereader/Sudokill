@@ -12,10 +12,11 @@ public class Player {
   final String name;
   private int id, totalPlayers;
   private Board board;
-  public final static int DEPTH=2;
+  public final static int DEPTH=4;
   public Player(String name) {
     this.name = name;
   }
+  
   /**
    * input looks like:
    * START|1|2|0 0 0 1 3 4 0 8 9|3 0 0 0 0 5 0 0 0| ... |0 2 0 0 1 0 0 6 0
@@ -26,6 +27,15 @@ public class Player {
     id = Integer.parseInt(data[1]);
     totalPlayers = Integer.parseInt(data[2]);
     this.board = new Board(Arrays.copyOfRange(data, 3, data.length));
+  }
+  /**
+   * input looks like:
+   * ADD|0 0 0 1 3 4 0 8 9|3 0 0 0 0 5 0 0 0| ... |0 2 0 0 1 0 0 6 0
+   * @param in
+   */
+  public void initializeBoardWithAdd(String in) {
+    String[] data = in.split("\\|");
+    this.board = new Board(Arrays.copyOfRange(data, 1, data.length));
   }
   /**
    * Input looks like
@@ -59,9 +69,7 @@ public class Player {
       Point winner = candidate;
       for(Point p: possibilities){
         Board newBoard = new Board(state);//copy
-        if(p.getX()>8 || p.getY()>8){
-          System.out.println();
-        }
+
         newBoard.addPositionByOpponent(p);
         Pair<Point, Double> res = alphaBeta(p, -beta, -alpha, depth-1, newBoard);
         Double score = -1*res.getSnd(); //negate to use symmetry. Now -b == alpha
@@ -70,7 +78,7 @@ public class Player {
           winner = p;
         }
         if(alpha>=beta)break;
-        
+
       }
       return new Pair<Point, Double>(winner, alpha);
     }
@@ -100,10 +108,10 @@ public class Player {
       if(optionsLeft == -1) winCount--;
       else if(optionsLeft == 1) winCount++;
     }
-    System.out.println("with " + b.toString()+" score: " + (winCount-((totalOptions/poss.size()))));
+    //System.out.println("with " + b.toString()+" score: " + (winCount-((totalOptions/poss.size()))));
     return winCount-((totalOptions/poss.size()));
   }
-    /**
+  /**
    * Returns what kind of choices i have after an opponent places the point p
    * returns 1 if I win, -1 if I lose, 0 if neighter
    * I lose = after the opponent places that point p with with that val, I have
@@ -127,7 +135,13 @@ public class Player {
   public String getMove() {
     Pair<Point, Double> result = alphaBeta(null, Double.NEGATIVE_INFINITY, 
         Double.POSITIVE_INFINITY, DEPTH, this.board);
-    return formReply(result.getFst());
+    Point res = result.getFst();
+    if(res == null){
+      System.out.println("LOST!!");
+      res = new Point(0, 0, 0);
+    }
+    this.board.addPositionByMe(res);
+    return formReply(res);
   }
   /**
    * reply looks like: 0 0 9
@@ -135,21 +149,11 @@ public class Player {
    * @param p
    * @return
    */
-  
+
   public String formReply(Point p){
     return new StringBuilder().append(p.getX()).append(" ").append(p.getY())
     .append(" ").append(p.getVal()).toString();
   }
-  
-  enum P{One, Two;
-    public static P get(int i){
-      if(i==1) return P.One;
-      return P.Two;
-    }
-    public P changeTurn(){
-      if(this==One)return Two;
-      else return One;
-    }
-  }
+
 
 }

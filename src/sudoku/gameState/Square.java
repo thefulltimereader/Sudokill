@@ -85,10 +85,13 @@ public class Square{
     }
     return l;
   }
+  //get options possible in this row ind=0,1,2
   public List<Point> getRowPossible(int ind) {
     List<Point> l = new ArrayList<Point>();
+    if(ind>2){
+      System.out.println();
+    }
     ind = ind*SIZE;
-    
     for(int i=0; i<SIZE; i++){
       if(content.get(ind)==0)
         for(int v=1; v<10; v++){
