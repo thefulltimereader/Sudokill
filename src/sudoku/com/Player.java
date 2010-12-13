@@ -12,7 +12,8 @@ public class Player {
   final String name;
   private int id, totalPlayers;
   private Board board;
-  public final static int DEPTH=4;
+  private int numOfPlays = 0;
+  public int DEPTH=3;
   public Player(String name) {
     this.name = name;
   }
@@ -133,14 +134,16 @@ public class Player {
   }
 
   public String getMove() {
+    if(numOfPlays>5) DEPTH++;
     Pair<Point, Double> result = alphaBeta(null, Double.NEGATIVE_INFINITY, 
         Double.POSITIVE_INFINITY, DEPTH, this.board);
     Point res = result.getFst();
     if(res == null){
       System.out.println("LOST!!");
-      res = new Point(0, 0, 0);
+      res = new Point(0,0,1);
     }
     this.board.addPositionByMe(res);
+    numOfPlays++;
     return formReply(res);
   }
   /**
