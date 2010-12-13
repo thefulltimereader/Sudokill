@@ -19,7 +19,10 @@ public class Square{
     for(int i=0; i<SIZE*SIZE; i++){
       content.add(0);
     }
+    shiftById = Point.inflate(id, SIZE, SIZE, 0);
+    shiftById = shiftById.scale(SIZE);
   }
+  private Point shiftById;
   /**
    * Copy
    * @param content
@@ -28,6 +31,7 @@ public class Square{
   public Square(Square s){
     this.id = s.id;
     content = new ArrayList<Integer>(s.content);
+    this.shiftById = s.shiftById;
   }
   public Square(List<Integer> content, int id){
     this.id = id;
@@ -51,7 +55,7 @@ public class Square{
       if(content.get(i)==0){
         for(Integer val=1; val<10; val++){
           if(!content.contains(val)){
-            Point p = Point.inflate(i, SIZE, SIZE, val).scale(id);
+            Point p = Point.inflate(i, SIZE, SIZE, val).addWith(shiftById);
             l.add(p);
           }
         }
@@ -59,12 +63,13 @@ public class Square{
     }
     return l;
   } 
+  
   public List<Point> possiblePositionsAt(Integer ind) {
     List<Point> l = new ArrayList<Point>();
     if(content.get(ind)==0){
       for(Integer val=1; val<10; val++){
           if(!content.contains(val)){
-            Point p = Point.inflate(ind, SIZE, SIZE, val).scale(id);
+            Point p = Point.inflate(ind, SIZE, SIZE, val).addWith(shiftById);
             l.add(p);
           }
         }
@@ -83,11 +88,13 @@ public class Square{
   public List<Point> getRowPossible(int ind) {
     List<Point> l = new ArrayList<Point>();
     ind = ind*SIZE;
+    
     for(int i=0; i<SIZE; i++){
       if(content.get(ind)==0)
         for(int v=1; v<10; v++){
           if(!content.contains(v))
-          l.add(Point.inflate(ind, SIZE, SIZE, v).scale(id));
+          l.add(Point.inflate(ind, SIZE, SIZE, v).addWith(shiftById));
+          //to conver to 9*9 array..
         }
       ind++;
     }
@@ -114,7 +121,7 @@ public class Square{
       if(content.get(ind)==0)
         for(int v=1; v<10; v++){
           if(!content.contains(v))
-            l.add(Point.inflate(ind, SIZE, SIZE, v).scale(id));
+            l.add(Point.inflate(ind, SIZE, SIZE, v).addWith(shiftById));
         }
       ind+=SIZE;
     }

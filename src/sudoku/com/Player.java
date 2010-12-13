@@ -12,7 +12,7 @@ public class Player {
   final String name;
   private int id, totalPlayers;
   private Board board;
-  public final static int DEPTH=4;
+  public final static int DEPTH=2;
   public Player(String name) {
     this.name = name;
   }
@@ -47,7 +47,11 @@ public class Player {
    */
   private Pair<Point, Double> alphaBeta(Point candidate, double alpha, 
       double beta, int depth, Board state){
-    if(depth==0 || state.complete()){
+    if(state.win() || state.complete()){
+      System.out.println("WIN! at "+ depth);
+      return new Pair<Point, Double>(candidate,depth+0.0);
+    }
+    if(depth<=0){
       return new Pair<Point, Double>(candidate, evaluateState(state));
     }
     else{
@@ -55,36 +59,97 @@ public class Player {
       Point winner = candidate;
       for(Point p: possibilities){
         Board newBoard = new Board(state);//copy
+        if(p.getX()>8 || p.getY()>8){
+          System.out.println();
+        }
         newBoard.addPositionByOpponent(p);
-        Pair<Point, Double> res = alphaBeta(p, -beta, -alpha, --depth, newBoard);
+        Pair<Point, Double> res = alphaBeta(p, -beta, -alpha, depth-1, newBoard);
         Double score = -1*res.getSnd(); //negate to use symmetry. Now -b == alpha
         if(alpha<score){
           alpha = score;
           winner = p;
         }
-        if(alpha>=beta) break;
+        if(alpha>=beta)break;
+        
       }
       return new Pair<Point, Double>(winner, alpha);
     }
   }
   /**
    * Core part of the game.. which moves are the best?? 
-   * 1st solve the board, if the board is unsolvable that's terrible
-   * 2nd if the solve
+   * So.. if it got here,, means that the deapth was not enough move to kill
+   * the opponent. Now the board is at the point where your opponent will place
+   * something (you just placed on the board). So count the number of nodes
+   * that will kill you on the possible points.
+   * 
+   * If your last move has taken all the possible positions and now your opp.
+   * has a free move, that's BAD so return bad
+   * 
+   * total number of moves smaller the better
    * @return score, higher the better
    */
   public double evaluateState(Board b){
-    return new Random().nextDouble();
+    if(b.crossSectionIsFull()) return -DEPTH/2;
+    List<Point> poss = b.getPossibleMoves();
+    int winCount=0;
+    double totalOptions=0.0;
+    for(Point p: poss){
+      Pair<Integer, Integer> pair =optionsAfterThisPoint(p, b); 
+      int optionsLeft = pair.getFst();
+      totalOptions+= pair.getSnd();
+      if(optionsLeft == -1) winCount--;
+      else if(optionsLeft == 1) winCount++;
+    }
+    System.out.println("with " + b.toString()+" score: " + (winCount-((totalOptions/poss.size()))));
+    return winCount-((totalOptions/poss.size()));
   }
+    /**
+   * Returns what kind of choices i have after an opponent places the point p
+   * returns 1 if I win, -1 if I lose, 0 if neighter
+   * I lose = after the opponent places that point p with with that val, I have
+   * no legit moves
+   * I win = after the opponent makes the move I have free choice (not win but
+   * good..)
+   * Neighter = 0
+   * @param p, b
+   * @return win/lose/neither , # of optionsn
+   */
+  public Pair<Integer, Integer> optionsAfterThisPoint(Point p, Board b) {
+    Board newBoard = new Board(b);
+    newBoard.addPositionByOpponent(p);
+    int size = newBoard.getPossibleMoves().size();
+    //check if this point kills my options.
+    if(newBoard.win()) return new Pair<Integer, Integer>(-1, size);
+    else if(newBoard.crossSectionIsFull()) return new Pair<Integer, Integer>(1, size);
+    return new Pair<Integer, Integer>(0, size);
+  }
+
   public String getMove() {
     Pair<Point, Double> result = alphaBeta(null, Double.NEGATIVE_INFINITY, 
-        Double.POSITIVE_INFINITY, DEPTH, board);
+        Double.POSITIVE_INFINITY, DEPTH, this.board);
     return formReply(result.getFst());
   }
+  /**
+   * reply looks like: 0 0 9
+   * // Places value 9 in row 0, column 0 (top left) 
+   * @param p
+   * @return
+   */
   
   public String formReply(Point p){
-    return new StringBuilder(p.getX()).append(" ").append(p.getY())
+    return new StringBuilder().append(p.getX()).append(" ").append(p.getY())
     .append(" ").append(p.getVal()).toString();
+  }
+  
+  enum P{One, Two;
+    public static P get(int i){
+      if(i==1) return P.One;
+      return P.Two;
+    }
+    public P changeTurn(){
+      if(this==One)return Two;
+      else return One;
+    }
   }
 
 }

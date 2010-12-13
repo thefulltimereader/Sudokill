@@ -19,7 +19,11 @@ public class Board {
       Square s = new Square(flatten(i, j));
       squares.add(s);
       }
+      
     }
+    possibleMovesAfterOpponentMoveWithConstraints = setPossibleMoves();
+    possibleMovesAfterOpponentMove = null;
+    opponentPt = null;
   }
   public List<Square> getSquares(){
     return new ArrayList<Square>(squares);
@@ -34,6 +38,8 @@ public class Board {
     for(int i=0; i<SIZE*SIZE;i++){
       squares.add(new Square(originalSqs.get(i)));
     }
+    possibleMovesAfterOpponentMove = new ArrayList<Point>();
+    possibleMovesAfterOpponentMoveWithConstraints= new ArrayList<Point>();
   }
   /**
    * Server Constructor input looks like:
@@ -57,19 +63,41 @@ public class Board {
         }
       }
     }
+    possibleMovesAfterOpponentMoveWithConstraints = setPossibleMoves();
+    possibleMovesAfterOpponentMove = null;
+    opponentPt = null;
   }
   /**
    * If opponentPt is null or no option at that cross-section, get
    * list from all possible moves
    * @return
    */
-  public List<Point> getPossibleMoves(){
+  private List<Point> setPossibleMoves(){
     if(opponentPt!=null){
-      List<Point> l = getPossibleMovesAt(opponentPt);
-      if(!l.isEmpty()) return l;
+      if(possibleMovesAfterOpponentMove.isEmpty()) return getAllPossibleMoves();
+      else{
+        List<Point> ret = checkConstraints(possibleMovesAfterOpponentMove);
+        for(Point p: ret){
+          if(p.getX()>8 || p.getY()>8){
+            System.out.println();
+          }
+        }
+        //if l is empty at this point.. means that the game is done, shouldn't really get here..
+        if(ret.isEmpty()) {
+          //throw new IllegalStateException("Shouldn't have been called");
+        }
+        return ret;
+      }
     }
-    //means there was no more move at last opponent move
     return getAllPossibleMoves();
+  }
+  //means there was no more move after the last opponent move
+  public boolean crossSectionIsFull(){
+    if(opponentPt==null) return false;
+    return possibleMovesAfterOpponentMove.isEmpty();    
+  }
+  public List<Point> getPossibleMoves(){
+    return possibleMovesAfterOpponentMoveWithConstraints;
   }
   /**
    * Returns all possible position (x, y)
@@ -79,8 +107,7 @@ public class Board {
     for(Square s: squares){
       List<Point> possB4RowAndCol = s.possiblePositions();      
       //remove vals that conflicts with row and col
-      //TODO: core reference de iiin yona?!Q
-      checkContraints(possB4RowAndCol);
+      possB4RowAndCol = checkConstraints(possB4RowAndCol);
       poss.addAll(possB4RowAndCol);
     }
     return poss;
@@ -88,26 +115,24 @@ public class Board {
   /**
    * Only in the diagonal/vertical of the point
    */
-  public List<Point> getPossibleMovesAt(Point pt){
-    Pair<Integer, Integer> sqIDandPos = getSquareIDandSquarePos(pt);
-    //List<Point> poss =  squares.get(sqIDandPos.getFst())
-    //.possiblePositionsAt(sqIDandPos.getSnd());
+  private List<Point> getEmptyPointsInCrossSectionAt(Point pt){
     List<Point> poss = getRowAndColPossibilities(pt);
     return poss;
   }
   private List<Point> getRowAndColPossibilities(Point p) {
     List<Point> poss = getRowPoints(p.getX()%SIZE);
     poss.addAll(getColPoints(p.getY()%SIZE));
-    return null;
+    return poss;
   }
   /**
-   * Refines the list by adding constraints of row and col
+   * Returned refined list by adding constraints of row and col
    * @param list
    * @return
    */
-  private void checkContraints(List<Point> list){
+  private List<Point> checkConstraints(List<Point> list){
+    List<Point> refinedList = new ArrayList<Point>(list);
     List<Integer> rowConstraints, colConstraints; 
-    Iterator<Point> itr = list.iterator();
+    Iterator<Point> itr = refinedList.iterator();
     while(itr.hasNext()){
       Point p = itr.next();
       rowConstraints= getRow(p.getX()%SIZE);
@@ -116,6 +141,7 @@ public class Board {
           colConstraints.contains(p.getVal()))
         itr.remove();
     }
+    return refinedList;
   }    
   /**
    * Gets the row with 0<=index<9
@@ -164,19 +190,28 @@ public class Board {
     }
     return col;
   }
-
+  private List<Point> possibleMovesAfterOpponentMove;
+  private List<Point> possibleMovesAfterOpponentMoveWithConstraints;
+  
   public void addPositionByOpponent(Point p) {
+    possibleMovesAfterOpponentMoveWithConstraints.clear();
+    possibleMovesAfterOpponentMove.clear();
     opponentPt = p;
     Pair<Integer, Integer> sqIDandPos = getSquareIDandSquarePos(p);
     squares.get(sqIDandPos.getFst()).update(sqIDandPos.getSnd(), p.getVal());
+    possibleMovesAfterOpponentMove = getEmptyPointsInCrossSectionAt(opponentPt);
+    possibleMovesAfterOpponentMoveWithConstraints = setPossibleMoves();
   }
-  public void addPosition(int index, int val, int squareId){
+  /*public void addPosition(int index, int val, int squareId){
     squares.get(squareId).update(index, val);
-  }
+  }*/
   
   public Pair<Integer, Integer> getSquareIDandSquarePos(Point pt){
-    int squareID = pt.getX()/SIZE;
-    int squarePos = pt.getX()*SIZE + pt.getY()%SIZE;
+    int squareID = (pt.getX()/SIZE)*SIZE + pt.getY()/SIZE;
+    if(squareID>9){
+      System.out.println();
+    }
+    int squarePos = (pt.getX()*SIZE + pt.getY()%SIZE) % (SIZE*SIZE);
     return new Pair<Integer, Integer>(squareID, squarePos);
   }
   
@@ -230,6 +265,18 @@ public class Board {
     }
     str.deleteCharAt(str.length()-1);
     return str.toString();
+  }
+  /**
+   * Win = true means that the next possible move is empty = the 2nd player
+   * loses
+   * @return
+   */
+  public boolean win() {
+    //game just started
+    if(possibleMovesAfterOpponentMove==null) return false;
+    if(!possibleMovesAfterOpponentMove.isEmpty()) return false;
+    if(possibleMovesAfterOpponentMoveWithConstraints.isEmpty()) return true;
+    return false;
   }
   
   

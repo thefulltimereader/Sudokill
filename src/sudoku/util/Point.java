@@ -78,6 +78,10 @@ public final class Point {
       return new Point(this.x*s, this.y*s, this.val);
     return this;
   }
+
+  public Point addWith(Point shiftById) {
+    return new Point(this.x+shiftById.x, this.y+shiftById.y, this.val+shiftById.val);
+  }
   
   
 }

@@ -21,7 +21,8 @@ public class PlayerTest {
 
   @Test
   public void testMakeMove(){
-    p.getMove();
+    String reply = p.getMove();
+    System.out.println(p.getMove());
   }
 
 }
